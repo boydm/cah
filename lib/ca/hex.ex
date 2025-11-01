@@ -66,7 +66,9 @@ defmodule Cah.Ca.Hex do
   defp nif_put(_, _, _, _, _), do: :erlang.nif_error("Did not find nif_put")
 
   def step({:cah, width, height, bin}) do
-    out = nif_step(bin, width, height, :binary.copy(<<0>>, width * height))
+    out = :binary.copy(<<0>>, width * height)
+    nif_step(bin, width, height, out)
+    # pry()
     {:cah, width, height, out}
   end
   defp nif_step(_, _, _, _), do: :erlang.nif_error("Did not find nif_step")

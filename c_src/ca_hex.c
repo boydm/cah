@@ -39,8 +39,8 @@ uint g_rules[] = RULES;
 }
 uint g_bits[] = BITS;
 
-// #define COLORS { 0, 42, 84, 126, 168, 210 }
-#define COLORS { 0, 200, 200, 200, 200, 200 }
+// #define COLORS { 0, 42, 84, 126, 168, 210, 252 }
+#define COLORS { 0, 204, 204, 204, 204, 204, 204 }
 uint g_colors[] = COLORS;
 
 uint count = 0;
@@ -189,49 +189,107 @@ nif_step(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   if ( !enif_get_uint(env, argv[2], &height) )      {return enif_make_badarg(env);}
   if ( !enif_inspect_binary(env, argv[3], &bout) )  {return enif_make_badarg(env);}
 
-  // transform the incoming array by the rules
+  // // transform the incoming array by the rules
+  // for ( uint y = 0; y < height; y++) {
+  //   for ( uint x = 0; x < width; x++) {
+  //     i = INDEX(width,x,y);
+  //     n = bin.data[i];
+  //     switch (n) {
+  //       case 9:
+  //       case 18:
+  //       case 27:
+  //       case 36:
+  //       case 45:
+  //       case 54:
+  //         // bin.data[i] = n;
+  //         // bin.data[i] = rand_rot6(n);
+  //         break;
+  //       case 0:
+  //         // b = 0;
+  //         // bin.data[i] = do_empty();
+  //         break;
+  //       case 63:
+  //         // b = 63;
+  //         // bin.data[i] = do_full();
+  //         break;
+  //       // default:
+  //         // bin.data[i] = rules[n];
+  //     }
+  //   }
+  // }
+
+  // // build the outgoing array by the transformed input
+  // for ( uint y = 0; y < height; y++) {
+  //   for ( uint x = 0; x < width; x++) {
+  //     // i = INDEX(width,x,y);
+  //     n = 0;
+  //     if ( y & 1 ) {
+  //       n |= bin.data[pos(width, height, x, y - 1)] & 1;
+  //       n |= bin.data[pos(width, height, x + 1 , y - 1)] & 2;
+  //       n |= bin.data[pos(width, height, x + 1, y )] & 4;
+  //       n |= bin.data[pos(width, height, x + 1 , y + 1 )] & 8;
+  //       n |= bin.data[pos(width, height, x, y + 1)] & 16;
+  //       n |= bin.data[pos(width, height, x - 1 , y)] & 32;        
+  //     } else {
+  //       n |= bin.data[pos(width, height, x - 1, y - 1)] & 1;
+  //       n |= bin.data[pos(width, height, x , y - 1)] & 2;
+  //       n |= bin.data[pos(width, height, x + 1, y )] & 4;
+  //       n |= bin.data[pos(width, height, x , y + 1 )] & 8;
+  //       n |= bin.data[pos(width, height, x - 1, y + 1)] & 16;
+  //       n |= bin.data[pos(width, height, x - 1 , y)] & 32;        
+  //     }
+  //     bout.data[INDEX(width,x,y)] = n;
+  //   }
+  // }
+
+  // build the outgoing array by the transformed input
   for ( uint y = 0; y < height; y++) {
-    for ( uint x = 0; x < width; x++) {
-      i = INDEX(width,x,y);
-      n = bin.data[i];
-      switch (n) {
-        case 9:
-        case 18:
-        case 27:
-        case 36:
-        case 45:
-        case 54:
-          // bin.data[i] = n;
-          // bin.data[i] = rand_rot6(n);
-          break;
-        case 0:
-          // b = 0;
-          // bin.data[i] = do_empty();
-          break;
-        case 63:
-          // b = 63;
-          // bin.data[i] = do_full();
-          break;
-        // default:
-          // bin.data[i] = rules[n];
+    if ( y & 1 ) {
+      for ( uint x = 0; x < width; x++) {
+        n = 0;
+        n |= bin.data[pos(width, height, x, y - 1)] & 1;
+        n |= bin.data[pos(width, height, x + 1 , y - 1)] & 2;
+        n |= bin.data[pos(width, height, x + 1, y )] & 4;
+        n |= bin.data[pos(width, height, x + 1 , y + 1 )] & 8;
+        n |= bin.data[pos(width, height, x, y + 1)] & 16;
+        n |= bin.data[pos(width, height, x - 1 , y)] & 32;
+        bout.data[INDEX(width,x,y)] = n;
+      }
+    } else {
+      for ( uint x = 0; x < width; x++) {
+        n = 0;
+        n |= bin.data[pos(width, height, x - 1, y - 1)] & 1;
+        n |= bin.data[pos(width, height, x , y - 1)] & 2;
+        n |= bin.data[pos(width, height, x + 1, y )] & 4;
+        n |= bin.data[pos(width, height, x , y + 1 )] & 8;
+        n |= bin.data[pos(width, height, x - 1, y + 1)] & 16;
+        n |= bin.data[pos(width, height, x - 1 , y)] & 32;
+        bout.data[INDEX(width,x,y)] = n;
       }
     }
   }
 
-  // build the outgoing array by the transformed input
-  for ( uint y = 0; y < height; y++) {
-    for ( uint x = 0; x < width; x++) {
-      // i = INDEX(width,x,y);
-      n = 0;
-      n |= bin.data[pos(width, height, x - 1, y - 1)] & 1;
-      n |= bin.data[pos(width, height, x , y - 1)] & 2;
-      n |= bin.data[pos(width, height, x + 1, y )] & 4;
-      n |= bin.data[pos(width, height, x , y + 1 )] & 8;
-      n |= bin.data[pos(width, height, x - 1, y + 1)] & 16;
-      n |= bin.data[pos(width, height, x - 1 , y)] & 32;
-      bout.data[INDEX(width,x,y)] = n;
-    }
-  }
+  //   for ( uint x = 0; x < width; x++) {
+  //     // i = INDEX(width,x,y);
+  //     n = 0;
+  //     if ( y & 1 ) {
+  //       n |= bin.data[pos(width, height, x, y - 1)] & 1;
+  //       n |= bin.data[pos(width, height, x + 1 , y - 1)] & 2;
+  //       n |= bin.data[pos(width, height, x + 1, y )] & 4;
+  //       n |= bin.data[pos(width, height, x + 1 , y + 1 )] & 8;
+  //       n |= bin.data[pos(width, height, x, y + 1)] & 16;
+  //       n |= bin.data[pos(width, height, x - 1 , y)] & 32;        
+  //     } else {
+  //       n |= bin.data[pos(width, height, x - 1, y - 1)] & 1;
+  //       n |= bin.data[pos(width, height, x , y - 1)] & 2;
+  //       n |= bin.data[pos(width, height, x + 1, y )] & 4;
+  //       n |= bin.data[pos(width, height, x , y + 1 )] & 8;
+  //       n |= bin.data[pos(width, height, x - 1, y + 1)] & 16;
+  //       n |= bin.data[pos(width, height, x - 1 , y)] & 32;        
+  //     }
+  //     bout.data[INDEX(width,x,y)] = n;
+  //   }
+  // }
 
   return argv[3];
 }

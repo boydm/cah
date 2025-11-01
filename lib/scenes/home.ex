@@ -18,12 +18,14 @@ defmodule Cah.Scene.Home do
     # get the width and height of the viewport. This is to demonstrate creating
     # a transparent full-screen rectangle to catch user input
     {width, height} = scene.viewport.size
+    # {width, height} = {5,5}
 
     # create the CA
     ca = Cah.Ca.Hex.build( width, height )
-    ca = Cah.Ca.Hex.put!(ca, 2, 0, 1)
+    ca = Cah.Ca.Hex.put!(ca, 2, 2, 1)
 
     # set up the bitmap stream
+    bitmap = Bitmap.build( :g, width, height, clear: :black )
     bitmap = Bitmap.build( :g, width, height, clear: :black )
       |> Cah.Ca.Hex.render( ca )
       |> Bitmap.commit()
