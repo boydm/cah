@@ -84,10 +84,10 @@ uint do_full() {
 
 //---------------------------------------------------------
 // get a value, accounting for wrapping
-uint pos( uint width, uint height, uint x, uint y) {
+uint pos( uint width, uint height, int x, int y) {
   uint max_x = width - 1;
   uint max_y = height - 1;
-  uint ny, nx = height - 1;
+  int ny, nx;
 
   if ( x < 0 ) {nx = max_x;}
   else if (x > max_x) {nx = 0;}

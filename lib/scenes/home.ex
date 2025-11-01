@@ -18,7 +18,7 @@ defmodule Cah.Scene.Home do
     # get the width and height of the viewport. This is to demonstrate creating
     # a transparent full-screen rectangle to catch user input
     {width, height} = scene.viewport.size
-    # {width, height} = {5,5}
+    # {width, height} = {4,4}
 
     # create the CA
     ca = Cah.Ca.Hex.build( width, height )
