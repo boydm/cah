@@ -8,6 +8,8 @@ defmodule Cah.Scene.Home do
   import Scenic.Primitives
   # import Scenic.Components
 
+  import IEx
+
   # ============================================================================
   # setup
 
@@ -17,27 +19,48 @@ defmodule Cah.Scene.Home do
     # a transparent full-screen rectangle to catch user input
     {width, height} = scene.viewport.size
 
+    # create the CA
+    ca = Cah.Ca.Hex.build( width, height )
+    ca = Cah.Ca.Hex.put!(ca, 2, 0, 1)
+
     # set up the bitmap stream
-    bitmap = Bitmap.build( :g, width, height, clear: :grey )
+    bitmap = Bitmap.build( :g, width, height, clear: :black )
+      |> Cah.Ca.Hex.render( ca )
       |> Bitmap.commit()
-    Scenic.Assets.Stream.put( "cah", bitmap )
+    Scenic.Assets.Stream.put( "ca", bitmap )
 
     graph =
       Graph.build()
-      |> rect( {width, height}, fill:  {:stream, "cah"} )
+      |> rect( {width, height}, fill:  {:stream, "ca"} )
 
     scene = push_graph(scene, graph)
+      |> assign(:ca, ca)
+      |> assign(:bitmap, bitmap)
+      |> assign(:w, width)
+      |> assign(:h, height)
+
+    Process.send(self(), :tick, [])
 
     {:ok, scene}
   end
 
-  def handle_info( :tick, scene ) do
-    Logger.info("tick")
-    {:noreply, scene}
+
+  def handle_info( :tick, %{assigns: %{ca: ca, bitmap: bitmap, w: w, h: h}} = scene ) do
+    ca = Cah.Ca.Hex.step( ca )
+
+    bitmap = Bitmap.mutable(bitmap)
+      |> Bitmap.clear( 0 )
+      |> Cah.Ca.Hex.render( ca )
+      |> Bitmap.commit()
+    Scenic.Assets.Stream.put( "ca", bitmap )
+
+    Process.send(self(), :tick, [])
+    {:noreply, assign(scene, :ca, ca)}
   end
 
   def handle_input(event, _context, scene) do
     Logger.info("Received event: #{inspect(event)}")
     {:noreply, scene}
   end
+
 end

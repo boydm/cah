@@ -8,6 +8,9 @@ defmodule Cah.MixProject do
       elixir: "~> 1.9",
       build_embedded: true,
       start_permanent: Mix.env() == :prod,
+      compilers: [:elixir_make | Mix.compilers()],
+      make_targets: ["all"],
+      make_clean: ["clean"],
       deps: deps()
     ]
   end
@@ -25,6 +28,7 @@ defmodule Cah.MixProject do
     [
       {:scenic, "~> 0.11.0"},
       {:scenic_driver_local, "~> 0.11.0"},
+      {:elixir_make, "~> 0.7.7", runtime: false},
     ]
   end
 end
