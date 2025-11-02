@@ -15,17 +15,27 @@
 #define spin(n) rot6r(rot6r(rot6r(n)))
 
 // its a matrix - the diagonal is the symmetry line
+// #define RULES { \
+//   0, 8, 16, 24, 32, 40, 48, 56, \
+//   1, 9, 17, 25, 33, 41, 49, 57, \
+//   2, 10, 18, 26, 34, 42, 50, 58, \
+//   3, 11, 19, 27, 35, 43, 51, 59, \
+//   4, 12, 20, 28, 36, 44, 52, 60, \
+//   5, 13, 21, 29, 37, 45, 53, 61, \
+//   6, 12, 22, 30, 38, 46, 54, 62, \
+//   7, 15, 23, 31, 39, 47, 55, 63 \
+// }
 #define RULES { \
   0, 8, 16, 24, 32, 40, 48, 56, \
-  1, 9, 17, 25, 33, 41, 49, 57, \
-  2, 10, 18, 26, 34, 42, 50, 58, \
-  3, 11, 19, 27, 35, 43, 51, 59, \
-  4, 12, 20, 28, 36, 44, 52, 60, \
-  5, 13, 21, 29, 37, 45, 53, 61, \
-  6, 12, 22, 30, 38, 46, 54, 62, \
+  1, 9, 17, 52, 33, 50, 49, 57, \
+  2, 10, 18, 44, 34, 42, 41, 58, \
+  3, 38, 37, 27, 35, 43, 51, 59, \
+  4, 12, 20, 28, 36, 26, 25, 60, \
+  5, 22, 21, 29, 19, 45, 53, 61, \
+  6, 14, 13, 30, 11, 46, 54, 62, \
   7, 15, 23, 31, 39, 47, 55, 63 \
 }
-uint g_rules[] = RULES;
+uint g_rules[64] = {0};
 
 #define BITS { \
   0, 1, 1, 2, 1, 2, 2, 3, \
@@ -39,8 +49,8 @@ uint g_rules[] = RULES;
 }
 uint g_bits[] = BITS;
 
-// #define COLORS { 0, 42, 84, 126, 168, 210, 252 }
-#define COLORS { 0, 204, 204, 204, 204, 204, 204 }
+#define COLORS { 0, 42, 84, 126, 168, 210, 252 }
+// #define COLORS { 0, 204, 204, 204, 204, 204, 204 }
 uint g_colors[] = COLORS;
 
 uint count = 0;
@@ -61,13 +71,14 @@ uint rand_rot6( uint n ) {
 //---------------------------------------------------------
 // add a 1 to an empty cell in a "random" location
 uint do_empty() {
-  return 1 << (count++ % 6);
+
+  return 1 << (rand() % 6);
 }
 
 //---------------------------------------------------------
 // remove a 1 from a full cell in a "random" location
 uint do_full() {
-  return 63 & ~(1 << (count++ % 6));
+  return 63 & ~(1 << (rand() % 6));
 }
 
 // //---------------------------------------------------------
@@ -115,6 +126,28 @@ static ERL_NIF_TERM
 nif_full(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   return enif_make_uint( env, do_full() ); 
 }
+
+static ERL_NIF_TERM
+nif_dot(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  ErlNifBinary  bin;
+  int  w, x, y, r;
+
+  // get the parameters
+  if ( !enif_inspect_binary(env, argv[0], &bin) )   {return enif_make_badarg(env);}
+  if ( !enif_get_int(env, argv[1], &w) )           {return enif_make_badarg(env);}
+  if ( !enif_get_int(env, argv[1], &x) )           {return enif_make_badarg(env);}
+  if ( !enif_get_int(env, argv[2], &y) )           {return enif_make_badarg(env);}
+  if ( !enif_get_int(env, argv[3], &r) )           {return enif_make_badarg(env);}
+
+  for ( int j = y - r; j < y + r; j++ ) {
+    for ( int i = x - r; i < x + r; i++ ) {
+      // bounds checking is in the elixir module
+      bin.data[INDEX(w,x,y)] = 63;
+    }
+  }
+  return argv[0]; 
+}
+
 
 //-----------------------------------------------------------------------------
 static ERL_NIF_TERM
@@ -189,58 +222,34 @@ nif_step(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   if ( !enif_get_uint(env, argv[2], &height) )      {return enif_make_badarg(env);}
   if ( !enif_inspect_binary(env, argv[3], &bout) )  {return enif_make_badarg(env);}
 
-  // // transform the incoming array by the rules
-  // for ( uint y = 0; y < height; y++) {
-  //   for ( uint x = 0; x < width; x++) {
-  //     i = INDEX(width,x,y);
-  //     n = bin.data[i];
-  //     switch (n) {
-  //       case 9:
-  //       case 18:
-  //       case 27:
-  //       case 36:
-  //       case 45:
-  //       case 54:
-  //         // bin.data[i] = n;
-  //         // bin.data[i] = rand_rot6(n);
-  //         break;
-  //       case 0:
-  //         // b = 0;
-  //         // bin.data[i] = do_empty();
-  //         break;
-  //       case 63:
-  //         // b = 63;
-  //         // bin.data[i] = do_full();
-  //         break;
-  //       // default:
-  //         // bin.data[i] = rules[n];
-  //     }
-  //   }
-  // }
-
-  // // build the outgoing array by the transformed input
-  // for ( uint y = 0; y < height; y++) {
-  //   for ( uint x = 0; x < width; x++) {
-  //     // i = INDEX(width,x,y);
-  //     n = 0;
-  //     if ( y & 1 ) {
-  //       n |= bin.data[pos(width, height, x, y - 1)] & 1;
-  //       n |= bin.data[pos(width, height, x + 1 , y - 1)] & 2;
-  //       n |= bin.data[pos(width, height, x + 1, y )] & 4;
-  //       n |= bin.data[pos(width, height, x + 1 , y + 1 )] & 8;
-  //       n |= bin.data[pos(width, height, x, y + 1)] & 16;
-  //       n |= bin.data[pos(width, height, x - 1 , y)] & 32;        
-  //     } else {
-  //       n |= bin.data[pos(width, height, x - 1, y - 1)] & 1;
-  //       n |= bin.data[pos(width, height, x , y - 1)] & 2;
-  //       n |= bin.data[pos(width, height, x + 1, y )] & 4;
-  //       n |= bin.data[pos(width, height, x , y + 1 )] & 8;
-  //       n |= bin.data[pos(width, height, x - 1, y + 1)] & 16;
-  //       n |= bin.data[pos(width, height, x - 1 , y)] & 32;        
-  //     }
-  //     bout.data[INDEX(width,x,y)] = n;
-  //   }
-  // }
+  // transform the incoming array by the rules
+  for ( uint y = 0; y < height; y++) {
+    for ( uint x = 0; x < width; x++) {
+      i = INDEX(width,x,y);
+      n = bin.data[i];
+      switch (n) {
+        case 9:
+        case 18:
+        case 36:
+        case 27:
+        case 45:
+        case 54:
+          // bin.data[i] = n;
+          bin.data[i] = rand_rot6(n);
+          break;
+        case 0:
+          // b = 0;
+          bin.data[i] = do_empty();
+          break;
+        case 63:
+          // b = 63;
+          bin.data[i] = do_full();
+          break;
+        // default:
+          bin.data[i] = g_rules[n];
+      }
+    }
+  }
 
   // build the outgoing array by the transformed input
   for ( uint y = 0; y < height; y++) {
@@ -268,28 +277,6 @@ nif_step(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
       }
     }
   }
-
-  //   for ( uint x = 0; x < width; x++) {
-  //     // i = INDEX(width,x,y);
-  //     n = 0;
-  //     if ( y & 1 ) {
-  //       n |= bin.data[pos(width, height, x, y - 1)] & 1;
-  //       n |= bin.data[pos(width, height, x + 1 , y - 1)] & 2;
-  //       n |= bin.data[pos(width, height, x + 1, y )] & 4;
-  //       n |= bin.data[pos(width, height, x + 1 , y + 1 )] & 8;
-  //       n |= bin.data[pos(width, height, x, y + 1)] & 16;
-  //       n |= bin.data[pos(width, height, x - 1 , y)] & 32;        
-  //     } else {
-  //       n |= bin.data[pos(width, height, x - 1, y - 1)] & 1;
-  //       n |= bin.data[pos(width, height, x , y - 1)] & 2;
-  //       n |= bin.data[pos(width, height, x + 1, y )] & 4;
-  //       n |= bin.data[pos(width, height, x , y + 1 )] & 8;
-  //       n |= bin.data[pos(width, height, x - 1, y + 1)] & 16;
-  //       n |= bin.data[pos(width, height, x - 1 , y)] & 32;        
-  //     }
-  //     bout.data[INDEX(width,x,y)] = n;
-  //   }
-  // }
 
   return argv[3];
 }
@@ -335,6 +322,8 @@ static ErlNifFunc nif_funcs[] = {
   {"nif_get",   4, nif_get,   0},
   {"nif_put",   5, nif_put,   0},
   {"nif_step",  4, nif_step,  0},
+
+  // {"nif_dot",  5, nif_dot,  0},
 
   {"nif_render",  4, nif_render,  0}
 };

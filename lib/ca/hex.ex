@@ -55,7 +55,7 @@ defmodule Cah.Ca.Hex do
   def put!( {:cah, width, height, bin} = cah, x, y, v ) do
     cond do
       v < 0 -> raise "bad value"
-      v >= @max_value -> raise "bad value"
+      v > @max_value -> raise "bad value"
       x < 0 -> raise "bad x"
       x >= width -> raise "bad x"
       y < 0 -> raise "bad y"
@@ -93,6 +93,15 @@ defmodule Cah.Ca.Hex do
   # n = Cah.Ca.Hex.rot6r n
 
 
+  def dot( {:cah, w, _h, ca} = cah, x, y, r ) do
+    # ca = nif_dot( ca, w, trunc(x), trunc(y), trunc(r) )
+    # {:cah, w, _h, ca}
+
+    cah
+    |> put!( x, y, 63 )
+  end
+  # defp nif_dot(_, _, _, _, _), do: :erlang.nif_error("Did not find nif_dot")
+
   def render( {:mutable_bitmap, {bw, bh, :g}, pixels} = bitmap, {:cah, cw, ch, ca} )
   when bw == cw and bh == ch do
     nif_render( pixels, ca, bw, bh )
@@ -107,6 +116,30 @@ defmodule Cah.Ca.Hex do
   # def count_ones(n, acc) when n > 0 do
   #   count_ones(n >>> 1, acc + (n &&& 1))
   # end
+
+  def table() do
+    Enum.reduce(0..63, [], fn(n,acc) ->
+      [ case n do
+        11 -> 52
+        13 -> 50
+        19 -> 44
+        21 -> 42
+        22 -> 41
+        25 -> 38
+        26 -> 37
+        37 -> 26
+        38 -> 25
+        41 -> 22
+        42 -> 21
+        44 -> 19
+        50 -> 13
+        52 -> 11
+        _ -> n |> rot6r() |> rot6r() |> rot6r()
+      end | acc ]
+    end)
+    |> Enum.reverse()
+    |> Enum.each(fn(n) -> IO.write("#{n}, ") end)
+  end
 
 end
 
