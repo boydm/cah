@@ -50,16 +50,22 @@ defmodule Cah.Scene.Home do
       |> assign(:g, g)
 
 
-    Process.send(self(), :tick, [])
+    Process.send(self(), :step, [])
+    Process.send(self(), :render, [])
 
     {:ok, scene}
   end
 
 
-  def handle_info( :tick, %{assigns: %{ca: ca, bitmap: bitmap, w: w, h: h, c: c, g: g}} = scene ) do
+  def handle_info( :step, %{assigns: %{ca: ca, bitmap: bitmap, w: w, h: h, c: c, g: g}} = scene ) do
     ca = Cah.Ca.Hex.step( ca )
+    Process.send(self(), :render, [])
+    Process.send(self(), :step, [])
+    {:noreply, assign(scene, ca: ca, c: c + 1)}
+  end
+
+  def handle_info( :render, %{assigns: %{ca: ca, bitmap: bitmap, w: w, h: h, c: c, g: g}} = scene ) do
     bitmap = Bitmap.mutable(bitmap)
-      |> Bitmap.clear( 0 )
       |> Cah.Ca.Hex.render( ca )
       |> Bitmap.commit()
     Scenic.Assets.Stream.put( "ca", bitmap )
@@ -67,8 +73,8 @@ defmodule Cah.Scene.Home do
     g = Graph.modify(g, :count, &text(&1,inspect(c)))
     scene = push_graph(scene, g)
 
-    Process.send(self(), :tick, [])
-    {:noreply, assign(scene, g: g, ca: ca, c: c + 1)}
+    # Process.send_after(self(), :render, 32)    
+    {:noreply, assign(scene, g: g)}
   end
 
   def handle_input(event, _context, scene) do
