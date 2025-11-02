@@ -27,11 +27,6 @@ defmodule Cah.Ca.Hex do
     {:cah, width, height, bin}
   end
 
-# cah = Cah.Ca.Hex.build 3, 3
-# cah = Cah.Ca.Hex.put! cah, 1, 1, 1
-# Cah.Ca.Hex.get cah, 1, 1
-# cah = Cah.Ca.Hex.step cah
-
   def get( {:cah, width, height, bin}, x, y ) do
     cond do
       x >= width -> {:error, :x}
@@ -66,10 +61,20 @@ defmodule Cah.Ca.Hex do
   defp nif_put(_, _, _, _, _), do: :erlang.nif_error("Did not find nif_put")
 
   def step({:cah, width, height, bin}) do
-    num_cores = cpu_cores()
+    # num_cores = cpu_cores()
     out = :binary.copy(<<0>>, width * height)
     # nif_step(bin, width, height, out, y_start, y_steps)
+
+    # slice = trunc(height / num_cores)
+
     nif_step(bin, width, height, out, 0, height)
+
+    # # Start all tasks
+    # tasks = Enum.map(0..(num_cores-1), fn n ->
+    #   Task.async(fn -> nif_step(bin, width, height, out, slice * n, slice) end)
+    # end)
+    # Task.await_many(tasks)
+
     {:cah, width, height, out}
   end
   defp nif_step(_, _, _, _, _, _), do: :erlang.nif_error("Did not find nif_step")

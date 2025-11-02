@@ -58,7 +58,6 @@ defmodule Cah.Scene.Home do
 
   def handle_info( :tick, %{assigns: %{ca: ca, bitmap: bitmap, w: w, h: h, c: c, g: g}} = scene ) do
     ca = Cah.Ca.Hex.step( ca )
-
     bitmap = Bitmap.mutable(bitmap)
       |> Bitmap.clear( 0 )
       |> Cah.Ca.Hex.render( ca )
