@@ -13,6 +13,8 @@ defmodule Cah.Scene.Home do
   # ============================================================================
   # setup
 
+  @fs 18
+
   # --------------------------------------------------------
   def init(scene, _param, _opts) do
     # get the width and height of the viewport. This is to demonstrate creating
@@ -34,15 +36,19 @@ defmodule Cah.Scene.Home do
       |> Bitmap.commit()
     Scenic.Assets.Stream.put( "ca", bitmap )
 
-    graph =
-      Graph.build()
+    g = Graph.build(font_size: @fs)
       |> rect( {width, height}, fill:  {:stream, "ca"} )
+      |> text( "#{width}x#{height}", fill: :light_green, t: {10,@fs} )
+      |> text( "0", fill: :light_green, t: {10,@fs * 2}, id: :count )
 
-    scene = push_graph(scene, graph)
+    scene = push_graph(scene, g)
+      |> assign(:c, 0)
       |> assign(:ca, ca)
       |> assign(:bitmap, bitmap)
       |> assign(:w, width)
       |> assign(:h, height)
+      |> assign(:g, g)
+
 
     Process.send(self(), :tick, [])
 
@@ -50,7 +56,7 @@ defmodule Cah.Scene.Home do
   end
 
 
-  def handle_info( :tick, %{assigns: %{ca: ca, bitmap: bitmap, w: w, h: h}} = scene ) do
+  def handle_info( :tick, %{assigns: %{ca: ca, bitmap: bitmap, w: w, h: h, c: c, g: g}} = scene ) do
     ca = Cah.Ca.Hex.step( ca )
 
     bitmap = Bitmap.mutable(bitmap)
@@ -59,8 +65,11 @@ defmodule Cah.Scene.Home do
       |> Bitmap.commit()
     Scenic.Assets.Stream.put( "ca", bitmap )
 
+    g = Graph.modify(g, :count, &text(&1,inspect(c)))
+    scene = push_graph(scene, g)
+
     Process.send(self(), :tick, [])
-    {:noreply, assign(scene, :ca, ca)}
+    {:noreply, assign(scene, g: g, ca: ca, c: c + 1)}
   end
 
   def handle_input(event, _context, scene) do
