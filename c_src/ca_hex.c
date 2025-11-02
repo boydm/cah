@@ -25,17 +25,30 @@
 //   6, 12, 22, 30, 38, 46, 54, 62, \
 //   7, 15, 23, 31, 39, 47, 55, 63 \
 // }
+// #define RULES { \
+//   0, 8, 16, 24, 32, 40, 48, 56, \
+//   1, 9, 17, 52, 33, 50, 49, 57, \
+//   2, 10, 18, 44, 34, 42, 41, 58, \
+//   3, 38, 37, 27, 35, 43, 51, 59, \
+//   4, 12, 20, 28, 36, 26, 25, 60, \
+//   5, 22, 21, 29, 19, 45, 53, 61, \
+//   6, 14, 13, 30, 11, 46, 54, 62, \
+//   7, 15, 23, 31, 39, 47, 55, 63 \
+// }
+
 #define RULES { \
-  0, 8, 16, 24, 32, 40, 48, 56, \
-  1, 9, 17, 52, 33, 50, 49, 57, \
-  2, 10, 18, 44, 34, 42, 41, 58, \
-  3, 38, 37, 27, 35, 43, 51, 59, \
-  4, 12, 20, 28, 36, 26, 25, 60, \
-  5, 22, 21, 29, 19, 45, 53, 61, \
-  6, 14, 13, 30, 11, 46, 54, 62, \
-  7, 15, 23, 31, 39, 47, 55, 63 \
+  0, 1, 2, 3, 4, 5, 6, 7, \
+  8, 9, 10, 38, 12, 22, 14, 15, \
+  16, 17, 18, 37, 20, 42, 13, 23, \
+  24, 52, 44, 27, 28, 29, 30, 31, \
+  32, 33, 34, 35, 36, 19, 11, 39, \
+  40, 50, 21, 43, 26, 45, 46, 47, \
+  48, 49, 41, 51, 25, 53, 54, 55, \
+  56, 57, 58, 59, 60, 61, 62, 63 \
 }
-uint g_rules[64] = {0};
+
+
+uint g_rules[64] = RULES;
 
 #define BITS { \
   0, 1, 1, 2, 1, 2, 2, 3, \
@@ -81,21 +94,9 @@ uint do_full() {
   return 63 & ~(1 << (rand() % 6));
 }
 
-// //---------------------------------------------------------
-// // get a value, accounting for wrapping
-// uint get_wrap( ErlNifBinary  bin, uint width, uint x, uint y) {
-//   uint max_x = width - 1;
-//   uint max_y = (bin.size / width) - 1;
-//   if (x < 0) {x = max_x;}
-//   if (x > max_x) {x = 0;}
-//   if (y < 0) {y = max_y;}
-//   if (y > max_y) {y = 0;}
-//   return bin.data[INDEX(width,x,y)];
-// }
-
 //---------------------------------------------------------
 // get a value, accounting for wrapping
-uint pos( uint width, uint height, int x, int y) {
+uint wrap( uint width, uint height, int x, int y) {
   uint max_x = width - 1;
   uint max_y = height - 1;
   int ny, nx;
@@ -113,6 +114,29 @@ uint pos( uint width, uint height, int x, int y) {
   return INDEX(width,nx,ny);
 }
 
+//---------------------------------------------------------
+// run the rule for one number
+uint run_rule( uint n ) {
+  switch (n) {
+    case 9:
+    case 18:
+    case 36:
+    case 27:
+    case 45:
+    case 54:
+      return rand_rot6(n);
+    case 0:
+      return do_empty();
+    case 63:
+      return do_full();
+  }
+  // return n;
+  return g_rules[n];
+}
+
+// uint rule_wrap( ErlNifBinary bin, uint width, uint height, int x, int, int y ) {
+//   run_rule( bin.data[wrap(width, height, x, y)] )
+// }
 
 //=============================================================================
 // Erlang NIF stuff from here down.
@@ -223,56 +247,84 @@ nif_step(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   if ( !enif_inspect_binary(env, argv[3], &bout) )  {return enif_make_badarg(env);}
 
   // transform the incoming array by the rules
-  for ( uint y = 0; y < height; y++) {
-    for ( uint x = 0; x < width; x++) {
-      i = INDEX(width,x,y);
-      n = bin.data[i];
-      switch (n) {
-        case 9:
-        case 18:
-        case 36:
-        case 27:
-        case 45:
-        case 54:
-          // bin.data[i] = n;
-          bin.data[i] = rand_rot6(n);
-          break;
-        case 0:
-          // b = 0;
-          bin.data[i] = do_empty();
-          break;
-        case 63:
-          // b = 63;
-          bin.data[i] = do_full();
-          break;
-        // default:
-          bin.data[i] = g_rules[n];
-      }
-    }
-  }
+  // for ( uint y = 0; y < height; y++) {
+  //   for ( uint x = 0; x < width; x++) {
+  //     i = INDEX(width,x,y);
+  //     bin.data[i] = run_rule( bin.data[i] );
+  //     // n = bin.data[i];
+  //     // switch (n) {
+  //     //   case 9:
+  //     //   case 18:
+  //     //   case 36:
+  //     //   case 27:
+  //     //   case 45:
+  //     //   case 54:
+  //     //     // bin.data[i] = n;
+  //     //     bin.data[i] = rand_rot6(n);
+  //     //     break;
+  //     //   case 0:
+  //     //     // b = 0;
+  //     //     bin.data[i] = do_empty();
+  //     //     break;
+  //     //   case 63:
+  //     //     // b = 63;
+  //     //     bin.data[i] = do_full();
+  //     //     break;
+  //     //   // default:
+  //     //   //   bin.data[i] = g_rules[n];
+  //     // }
+  //   }
+  // }
+
+  // // build the outgoing array by the transformed input
+  // for ( uint y = 0; y < height; y++) {
+  //   if ( y & 1 ) {
+  //     for ( uint x = 0; x < width; x++) {
+  //       n = 0;
+  //       n |= run_rule( bin.data[wrap(width, height, x, y - 1)]) & 1;
+  //       n |= run_rule( bin.data[wrap(width, height, x + 1 , y - 1)]) & 2;
+  //       n |= run_rule( bin.data[wrap(width, height, x + 1, y )]) & 4;
+  //       n |= run_rule( bin.data[wrap(width, height, x + 1 , y + 1 )]) & 8;
+  //       n |= run_rule( bin.data[wrap(width, height, x, y + 1)]) & 16;
+  //       n |= run_rule( bin.data[wrap(width, height, x - 1 , y)]) & 32;
+  //       bout.data[INDEX(width,x,y)] = n;
+  //     }
+  //   } else {
+  //     for ( uint x = 0; x < width; x++) {
+  //       n = 0;
+  //       n |= run_rule( bin.data[wrap(width, height, x - 1, y - 1)]) & 1;
+  //       n |= run_rule( bin.data[wrap(width, height, x , y - 1)]) & 2;
+  //       n |= run_rule( bin.data[wrap(width, height, x + 1, y )]) & 4;
+  //       n |= run_rule( bin.data[wrap(width, height, x , y + 1 )]) & 8;
+  //       n |= run_rule( bin.data[wrap(width, height, x - 1, y + 1)]) & 16;
+  //       n |= run_rule( bin.data[wrap(width, height, x - 1 , y)]) & 32;
+  //       bout.data[INDEX(width,x,y)] = n;
+  //     }
+  //   }
+  // }
 
   // build the outgoing array by the transformed input
   for ( uint y = 0; y < height; y++) {
     if ( y & 1 ) {
       for ( uint x = 0; x < width; x++) {
         n = 0;
-        n |= bin.data[pos(width, height, x, y - 1)] & 1;
-        n |= bin.data[pos(width, height, x + 1 , y - 1)] & 2;
-        n |= bin.data[pos(width, height, x + 1, y )] & 4;
-        n |= bin.data[pos(width, height, x + 1 , y + 1 )] & 8;
-        n |= bin.data[pos(width, height, x, y + 1)] & 16;
-        n |= bin.data[pos(width, height, x - 1 , y)] & 32;
+        n |= run_rule( bin.data[wrap(width, height, x, y - 1)]) & 1;
+        n |= run_rule( bin.data[wrap(width, height, x + 1 , y - 1)]) & 2;
+        n |= run_rule( bin.data[wrap(width, height, x + 1, y )]) & 4;
+        n |= run_rule( bin.data[wrap(width, height, x + 1 , y + 1 )]) & 8;
+        n |= run_rule( bin.data[wrap(width, height, x, y + 1)]) & 16;
+        n |= run_rule( bin.data[wrap(width, height, x - 1 , y)]) & 32;
         bout.data[INDEX(width,x,y)] = n;
       }
     } else {
       for ( uint x = 0; x < width; x++) {
         n = 0;
-        n |= bin.data[pos(width, height, x - 1, y - 1)] & 1;
-        n |= bin.data[pos(width, height, x , y - 1)] & 2;
-        n |= bin.data[pos(width, height, x + 1, y )] & 4;
-        n |= bin.data[pos(width, height, x , y + 1 )] & 8;
-        n |= bin.data[pos(width, height, x - 1, y + 1)] & 16;
-        n |= bin.data[pos(width, height, x - 1 , y)] & 32;
+        n |= run_rule( bin.data[wrap(width, height, x - 1, y - 1)]) & 1;
+        n |= run_rule( bin.data[wrap(width, height, x , y - 1)]) & 2;
+        n |= run_rule( bin.data[wrap(width, height, x + 1, y )]) & 4;
+        n |= run_rule( bin.data[wrap(width, height, x , y + 1 )]) & 8;
+        n |= run_rule( bin.data[wrap(width, height, x - 1, y + 1)]) & 16;
+        n |= run_rule( bin.data[wrap(width, height, x - 1 , y)]) & 32;
         bout.data[INDEX(width,x,y)] = n;
       }
     }
@@ -321,7 +373,7 @@ static ErlNifFunc nif_funcs[] = {
 
   {"nif_get",   4, nif_get,   0},
   {"nif_put",   5, nif_put,   0},
-  {"nif_step",  4, nif_step,  0},
+  {"nif_step",  6, nif_step,  0},
 
   // {"nif_dot",  5, nif_dot,  0},
 

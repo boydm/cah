@@ -66,12 +66,13 @@ defmodule Cah.Ca.Hex do
   defp nif_put(_, _, _, _, _), do: :erlang.nif_error("Did not find nif_put")
 
   def step({:cah, width, height, bin}) do
+    num_cores = cpu_cores()
     out = :binary.copy(<<0>>, width * height)
-    nif_step(bin, width, height, out)
-    # pry()
+    # nif_step(bin, width, height, out, y_start, y_steps)
+    nif_step(bin, width, height, out, 0, height)
     {:cah, width, height, out}
   end
-  defp nif_step(_, _, _, _), do: :erlang.nif_error("Did not find nif_step")
+  defp nif_step(_, _, _, _, _, _), do: :erlang.nif_error("Did not find nif_step")
 
   def rot6l(n), do: nif_rot6l(n)
   defp nif_rot6l(_), do: :erlang.nif_error("Did not find rot6l")
@@ -84,13 +85,6 @@ defmodule Cah.Ca.Hex do
 
   def full(), do: nif_full()
   defp nif_full(), do: :erlang.nif_error("Did not find nif_full")
-
-  # def get( bin, x, y ), do: :binary.at(bin, x * y)
-  # def put( bin, x, y ), do: :binary.at(bin, x * y)
-
-
-  # n = Cah.Ca.Hex.rot6l n
-  # n = Cah.Ca.Hex.rot6r n
 
 
   def dot( {:cah, w, _h, ca} = cah, x, y, r ) do
@@ -110,35 +104,34 @@ defmodule Cah.Ca.Hex do
   defp nif_render(_, _, _, _), do: :erlang.nif_error("Did not find nif_render")
 
 
-  # import Bitwise
-  # def count_ones(n, acc \\ 0)
-  # def count_ones(0, acc), do: acc
-  # def count_ones(n, acc) when n > 0 do
-  #   count_ones(n >>> 1, acc + (n &&& 1))
-  # end
-
+  # build and display the main rules table
   def table() do
     Enum.reduce(0..63, [], fn(n,acc) ->
       [ case n do
-        11 -> 52
-        13 -> 50
-        19 -> 44
+        11 -> 38
+        13 -> 22
+        19 -> 37
         21 -> 42
-        22 -> 41
-        25 -> 38
-        26 -> 37
-        37 -> 26
-        38 -> 25
-        41 -> 22
+        22 -> 13
+        25 -> 52
+        26 -> 44
+        37 -> 19
+        38 -> 11
+        41 -> 50
         42 -> 21
-        44 -> 19
-        50 -> 13
-        52 -> 11
-        _ -> n |> rot6r() |> rot6r() |> rot6r()
+        44 -> 26
+        50 -> 41
+        52 -> 25
+        _ -> n #|> rot6r() |> rot6r() |> rot6r()
       end | acc ]
     end)
     |> Enum.reverse()
     |> Enum.each(fn(n) -> IO.write("#{n}, ") end)
+  end
+
+
+  defp cpu_cores() do
+    :erlang.system_info(:schedulers_online)
   end
 
 end
