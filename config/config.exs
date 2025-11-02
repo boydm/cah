@@ -8,7 +8,7 @@ config :scenic, :assets, module: Cah.Assets
 # Configure the main viewport for the Scenic application
 config :cah, :viewport,
   name: :main_viewport,
-  size: {1000, 1000},
+  size: {1000, 400},
   theme: :dark,
   default_scene: Cah.Scene.Home,
   drivers: [

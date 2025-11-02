@@ -115,6 +115,26 @@ uint wrap( uint width, uint height, int x, int y) {
 }
 
 //---------------------------------------------------------
+// get a value, accounting for wrapping
+uint wind( ErlNifBinary  bin, uint width, uint height, int x, int y) {
+  uint max_x = width - 1;
+  uint max_y = height - 1;
+  int ny, nx;
+
+  if ( x < 0 ) {return do_empty() & ~32;}
+  else if (x > max_x) {return 0;}
+  else {nx = x;}
+
+  if ( y < 0 ) {ny = max_y;}
+  else if (y > max_y) {ny = 0;}
+  else {ny = y;}  
+
+  // printf("x %d:%d. y %d:%d\n", x, nx, y, ny);
+
+  return bin.data[INDEX(width,nx,ny)];
+}
+
+//---------------------------------------------------------
 // run the rule for one number
 uint run_rule( uint n ) {
   switch (n) {
@@ -229,7 +249,7 @@ nif_put(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 }
 
 static ERL_NIF_TERM
-nif_step(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+nif_step_wrap(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   ErlNifBinary  bin, bout;
   unsigned int  width;
   unsigned int  height;
@@ -268,6 +288,56 @@ nif_step(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
         n |= run_rule( bin.data[wrap(width, height, x , y + 1 )]) & 8;
         n |= run_rule( bin.data[wrap(width, height, x - 1, y + 1)]) & 16;
         n |= run_rule( bin.data[wrap(width, height, x - 1 , y)]) & 32;
+        bout.data[INDEX(width,x,y)] = n;
+      }
+    }
+  }
+
+  return argv[3];
+}
+
+static ERL_NIF_TERM
+nif_step_wind(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  ErlNifBinary  bin, bout;
+  unsigned int  width;
+  unsigned int  height;
+  unsigned int  i;
+  unsigned int  n, b;
+  unsigned int  y_start, y_count;
+
+  // get the parameters
+  if ( !enif_inspect_binary(env, argv[0], &bin) )   {return enif_make_badarg(env);}
+  if ( !enif_get_uint(env, argv[1], &width) )       {return enif_make_badarg(env);}
+  if ( !enif_get_uint(env, argv[2], &height) )      {return enif_make_badarg(env);}
+  if ( !enif_inspect_binary(env, argv[3], &bout) )  {return enif_make_badarg(env);}
+  if ( !enif_get_uint(env, argv[4], &y_start) )  {return enif_make_badarg(env);}
+  if ( !enif_get_uint(env, argv[5], &y_count) )  {return enif_make_badarg(env);}
+
+  // build the outgoing array by the transformed input
+  uint y_max = y_start + y_count;
+  for ( uint y = y_start; y < y_max; y++) {
+    // bin.data[INDEX(width,0,y)] = 14;
+    // bin.data[INDEX(width,width - 1,y)] = 0;
+    if ( y & 1 ) {
+      for ( uint x = 0; x < width; x++) {
+        n = 0;
+        n |= run_rule( wind(bin, width, height, x, y - 1) ) & 1;
+        n |= run_rule( wind(bin, width, height, x + 1 , y - 1) ) & 2;
+        n |= run_rule( wind(bin, width, height, x + 1, y ) ) & 4;
+        n |= run_rule( wind(bin, width, height, x + 1 , y + 1 ) ) & 8;
+        n |= run_rule( wind(bin, width, height, x, y + 1) ) & 16;
+        n |= run_rule( wind(bin, width, height, x - 1 , y) ) & 32;
+        bout.data[INDEX(width,x,y)] = n;
+      }
+    } else {
+      for ( uint x = 0; x < width; x++) {
+        n = 0;
+        n |= run_rule( wind(bin, width, height, x - 1, y - 1) ) & 1;
+        n |= run_rule( wind(bin, width, height, x , y - 1) ) & 2;
+        n |= run_rule( wind(bin, width, height, x + 1, y ) ) & 4;
+        n |= run_rule( wind(bin, width, height, x , y + 1 ) ) & 8;
+        n |= run_rule( wind(bin, width, height, x - 1, y + 1) ) & 16;
+        n |= run_rule( wind(bin, width, height, x - 1 , y) ) & 32;
         bout.data[INDEX(width,x,y)] = n;
       }
     }
@@ -316,7 +386,8 @@ static ErlNifFunc nif_funcs[] = {
 
   {"nif_get",   4, nif_get,   0},
   {"nif_put",   5, nif_put,   0},
-  {"nif_step_wrap",  6, nif_step,  ERL_NIF_DIRTY_JOB_CPU_BOUND},
+  {"nif_step_wrap",  6, nif_step_wrap,  ERL_NIF_DIRTY_JOB_CPU_BOUND},
+  {"nif_step_wind",  6, nif_step_wind,  ERL_NIF_DIRTY_JOB_CPU_BOUND},
 
   // {"nif_dot",  5, nif_dot,  0},
 

@@ -64,6 +64,7 @@ defmodule Cah.Ca.Hex do
     out = :binary.copy(<<0>>, width * height)
 
     nif_step_wrap(bin, width, height, out, 0, height)
+    nif_step_wind(bin, width, height, out, 0, height)
 
     # Start all tasks
     # num_cores = cpu_cores()
@@ -76,6 +77,7 @@ defmodule Cah.Ca.Hex do
     {:cah, width, height, out}
   end
   defp nif_step_wrap(_, _, _, _, _, _), do: :erlang.nif_error("Did not find nif_step_wrap")
+  defp nif_step_wind(_, _, _, _, _, _), do: :erlang.nif_error("Did not find nif_step_wrap")
 
   def rot6l(n), do: nif_rot6l(n)
   defp nif_rot6l(_), do: :erlang.nif_error("Did not find rot6l")
@@ -125,7 +127,7 @@ defmodule Cah.Ca.Hex do
         44 -> 26
         50 -> 41
         52 -> 25
-        _ -> n #|> rot6r() |> rot6r() |> rot6r()
+        _ -> n
       end | acc ]
     end)
     |> Enum.reverse()
