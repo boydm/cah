@@ -61,15 +61,13 @@ defmodule Cah.Ca.Hex do
   defp nif_put(_, _, _, _, _), do: :erlang.nif_error("Did not find nif_put")
 
   def step({:cah, width, height, bin}) do
-    # num_cores = cpu_cores()
     out = :binary.copy(<<0>>, width * height)
-    # nif_step(bin, width, height, out, y_start, y_steps)
 
+    nif_step_wrap(bin, width, height, out, 0, height)
+
+    # Start all tasks
+    # num_cores = cpu_cores()
     # slice = trunc(height / num_cores)
-
-    nif_step(bin, width, height, out, 0, height)
-
-    # # Start all tasks
     # tasks = Enum.map(0..(num_cores-1), fn n ->
     #   Task.async(fn -> nif_step(bin, width, height, out, slice * n, slice) end)
     # end)
@@ -77,7 +75,7 @@ defmodule Cah.Ca.Hex do
 
     {:cah, width, height, out}
   end
-  defp nif_step(_, _, _, _, _, _), do: :erlang.nif_error("Did not find nif_step")
+  defp nif_step_wrap(_, _, _, _, _, _), do: :erlang.nif_error("Did not find nif_step_wrap")
 
   def rot6l(n), do: nif_rot6l(n)
   defp nif_rot6l(_), do: :erlang.nif_error("Did not find rot6l")

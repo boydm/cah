@@ -126,9 +126,9 @@ uint run_rule( uint n ) {
     case 54:
       return rand_rot6(n);
     case 0:
-      return do_empty();
-    case 63:
-      return do_full();
+    //   return do_empty();
+    // case 63:
+    //   return do_full();
   }
   // return n;
   return g_rules[n];
@@ -316,11 +316,11 @@ static ErlNifFunc nif_funcs[] = {
 
   {"nif_get",   4, nif_get,   0},
   {"nif_put",   5, nif_put,   0},
-  {"nif_step",  6, nif_step,  ERL_NIF_DIRTY_JOB_CPU_BOUND},
+  {"nif_step_wrap",  6, nif_step,  ERL_NIF_DIRTY_JOB_CPU_BOUND},
 
   // {"nif_dot",  5, nif_dot,  0},
 
-  {"nif_render",  4, nif_render,  0}
+  {"nif_render",  4, nif_render,  ERL_NIF_DIRTY_JOB_CPU_BOUND}
 };
 
 ERL_NIF_INIT(Elixir.Cah.Ca.Hex, nif_funcs, NULL, NULL, NULL, NULL)
